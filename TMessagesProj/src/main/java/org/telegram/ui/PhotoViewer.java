@@ -983,6 +983,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private LinearLayoutManager mentionLayoutManager;
     private AnimatorSet mentionListAnimation;
     private boolean allowMentions;
+    private boolean isSavingContentRestricted;
 
     private ActionBarPopupWindow sendPopupWindow;
     private ActionBarPopupWindow.ActionBarPopupWindowLayout sendPopupLayout;
@@ -10545,6 +10546,16 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             groupedPhotosListView.fillList();
             pageBlocksAdapter.updateSlideshowCell(pageBlock);
         }
+        if (isSavingContentRestricted) {
+            sendItem.setVisibility(View.GONE);
+            shareItem.setVisibility(View.GONE);
+            menuItem.hideSubItem(gallery_menu_save);
+            menuItem.hideSubItem(gallery_menu_savegif);
+            menuItem.hideSubItem(gallery_menu_share);
+            shareButton.setVisibility(View.GONE);
+        } else {
+            shareButton.setVisibility(View.VISIBLE);
+        }
         setCurrentCaption(newMessageObject, caption, animateCaption);
     }
 
@@ -11982,6 +11993,12 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             }
         }
 
+        if (chatActivity != null) {
+            isSavingContentRestricted = chatActivity.currentChat != null && chatActivity.currentChat.noforwards;
+        } else {
+            TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-dialogId);
+            isSavingContentRestricted = chat != null && chat.noforwards;
+        }
         try {
             windowLayoutParams.type = WindowManager.LayoutParams.LAST_APPLICATION_WINDOW;
             if (Build.VERSION.SDK_INT >= 21) {
@@ -11992,7 +12009,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             } else {
                 windowLayoutParams.flags = WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM;
             }
-            if (chatActivity != null && chatActivity.getCurrentEncryptedChat() != null) {
+            if (chatActivity != null && chatActivity.getCurrentEncryptedChat() != null || isSavingContentRestricted) {
                 windowLayoutParams.flags |= WindowManager.LayoutParams.FLAG_SECURE;
             } else {
                 windowLayoutParams.flags &=~ WindowManager.LayoutParams.FLAG_SECURE;

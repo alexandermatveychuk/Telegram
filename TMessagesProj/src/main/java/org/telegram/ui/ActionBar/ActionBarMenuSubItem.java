@@ -71,7 +71,7 @@ public class ActionBarMenuSubItem extends FrameLayout {
         textView = new TextView(context);
         textView.setLines(1);
         textView.setSingleLine(true);
-        textView.setGravity(Gravity.LEFT);
+        textView.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
         textView.setEllipsize(TextUtils.TruncateAt.END);
         textView.setTextColor(textColor);
         textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);

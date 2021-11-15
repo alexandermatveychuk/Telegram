@@ -15,6 +15,7 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.ContactsController;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.FileLoader;
@@ -45,6 +46,7 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
     private long dialogId;
     private SimpleTextView nameTextView;
     ProfileActivity.AvatarImageView avatarImageView;
+    private HintView savingContentRestrictionHint;
 
     SharedMediaLayout sharedMediaLayout;
     AudioPlayerAlert.ClippingTextViewSwitcher mediaCounterTextView;
@@ -176,7 +178,7 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
 
             @Override
             public TLRPC.Chat getCurrentChat() {
-                return null;
+                return MessagesController.getInstance(currentAccount).getChat(currentChatInfo.id);
             }
 
             @Override
@@ -197,6 +199,16 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
             @Override
             public void updateSelectedMediaTabText() {
                 updateMediaCount();
+            }
+
+            @Override
+            public void showSharedMediaHint(String text, View showFor) {
+                if (savingContentRestrictionHint == null) {
+                    savingContentRestrictionHint = new HintView(context, 9);
+                    fragmentView.addView(savingContentRestrictionHint, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 10, 0, 10, 0));
+                }
+                savingContentRestrictionHint.setText(text);
+                savingContentRestrictionHint.showForView(showFor, true);
             }
         }, SharedMediaLayout.VIEW_TYPE_MEDIA_ACTIVITY) {
             @Override
@@ -276,6 +288,14 @@ public class MediaActivity extends BaseFragment implements SharedMediaLayout.Sha
         updateMediaCount();
         updateColors();
         return fragmentView;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (sharedMediaLayout != null) {
+            sharedMediaLayout.onResume();
+        }
     }
 
     private void updateMediaCount() {

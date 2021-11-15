@@ -423,6 +423,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
     private boolean scrolling;
     private long mergeDialogId;
     private TLRPC.ChatFull info;
+    private boolean isSavingContentRestricted;
 
     private AnimatorSet tabsAnimation;
     private boolean tabsAnimationInProgress;
@@ -1431,7 +1432,13 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             forwardItem.setDuplicateParentStateEnabled(false);
             actionModeLayout.addView(forwardItem, new LinearLayout.LayoutParams(AndroidUtilities.dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
             actionModeViews.add(forwardItem);
-            forwardItem.setOnClickListener(v -> onActionBarItemClick(forward));
+            forwardItem.setOnClickListener(v -> {
+                if (isSavingContentRestricted) {
+                    showSavingContentRestrictionHint();
+                } else {
+                    onActionBarItemClick(forward);
+                }
+            });
         }
         deleteItem = new ActionBarMenuItem(context, null, Theme.getColor(Theme.key_actionBarActionModeDefaultSelector), Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2), false);
         deleteItem.setIcon(R.drawable.msg_delete);
@@ -3949,6 +3956,9 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         if (linksAdapter != null) {
             linksAdapter.notifyDataSetChanged();
         }
+        TLRPC.Chat chat = info != null ? MessagesController.getInstance(profileActivity.getCurrentAccount()).getChat(info.id) : null;
+        isSavingContentRestricted = chat != null && chat.noforwards;
+        forwardItem.setAlpha(isSavingContentRestricted ? 0.5f : 1.0f);
         for (int a = 0; a < mediaPages.length; a++) {
             fixLayoutInternal(a);
         }
@@ -4609,6 +4619,19 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         if (num == 0) {
             updatePhotosAdapter();
         }
+    }
+
+    private void showSavingContentRestrictionHint() {
+        TLRPC.Chat chat = info != null ? MessagesController.getInstance(profileActivity.getCurrentAccount()).getChat(info.id) : null;
+
+        String text;
+        if (ChatObject.isChannel(chat) && !chat.megagroup) {
+            text = LocaleController.getString("ForwardFromChannelRestricted", R.string.ForwardFromChannelRestricted);
+        } else {
+            text = LocaleController.getString("ForwardFromGroupRestricted", R.string.ForwardFromGroupRestricted);
+        }
+
+        delegate.showSharedMediaHint(text, forwardItem);
     }
 
     SharedLinkCell.SharedLinkCellDelegate sharedLinkCellDelegate = new SharedLinkCell.SharedLinkCellDelegate() {
@@ -6429,5 +6452,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         boolean canSearchMembers();
 
         void updateSelectedMediaTabText();
+
+        void showSharedMediaHint(String text, View showFor);
     }
 }

@@ -148,6 +148,7 @@ import org.telegram.ui.Components.CombinedDrawable;
 import org.telegram.ui.Components.CrossfadeDrawable;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.FragmentContextView;
+import org.telegram.ui.Components.HintView;
 import org.telegram.ui.Components.IdenticonDrawable;
 import org.telegram.ui.Components.ImageUpdater;
 import org.telegram.ui.Components.LayoutHelper;
@@ -204,6 +205,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private StickerEmptyView emptyView;
     private boolean sharedMediaLayoutAttached;
     private SharedMediaLayout.SharedMediaPreloader sharedMediaPreloader;
+    private HintView sharedMediaHint;
 
     private RLottieDrawable cameraDrawable;
 
@@ -3186,6 +3188,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     searchItem.setEnabled(!scrolling && !isPulledDown);
                 }
                 sharedMediaLayout.scrollingByUser = listView.scrollingByUser;
+                if (sharedMediaHint != null) {
+                    sharedMediaHint.hide();
+                }
             }
 
             @Override
@@ -8120,6 +8125,20 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
     public void scrollToSharedMedia() {
         layoutManager.scrollToPositionWithOffset(sharedMediaRow, -listView.getPaddingTop());
+    }
+
+    public void showSharedMediaHint(String text, View showFor) {
+        if (sharedMediaHint == null) {
+            FrameLayout frameLayout = (FrameLayout) getFragmentView();
+            int index = frameLayout.indexOfChild(getActionBar());
+            if (index == -1) {
+                return;
+            }
+            sharedMediaHint = new HintView(frameLayout.getContext(), 9);
+            frameLayout.addView(sharedMediaHint, index + 1,  LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 10, 0, 10, 0));
+        }
+        sharedMediaHint.setText(text);
+        sharedMediaHint.showForView(showFor, true);
     }
 
     private class DiffCallback extends DiffUtil.Callback {

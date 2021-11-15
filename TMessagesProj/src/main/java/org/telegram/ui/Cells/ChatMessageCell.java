@@ -444,6 +444,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private RectF instantButtonRect = new RectF();
     private int[] pressedState = new int[]{android.R.attr.state_enabled, android.R.attr.state_pressed};
     private float animatingLoadingProgressProgress;
+    private boolean isSavingContentRestricted = false;
 
     private RoundVideoPlayingDrawable roundVideoPlayingDrawable;
 
@@ -3073,6 +3074,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 newReply != lastReplyMessage;
         boolean groupChanged = groupedMessages != currentMessagesGroup;
         boolean pollChanged = false;
+        TLRPC.Chat chat = currentMessageObject != null ? MessagesController.getInstance(currentAccount).getChat(currentMessageObject.getChatId()) : null;
+        boolean isSavingContentRestrictedChanged = chat != null && chat.noforwards != isSavingContentRestricted;
+        isSavingContentRestricted = chat != null && chat.noforwards;
         if (drawCommentButton || drawSideButton == 3 && !((hasDiscussion && messageObject.isLinkedToChat(linkedChatId) || isRepliesChat) && (currentPosition == null || currentPosition.siblingHeights == null && (currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 || currentPosition.siblingHeights != null && (currentPosition.flags & MessageObject.POSITION_FLAG_TOP) == 0))) {
             dataChanged = true;
         }
@@ -3120,7 +3124,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
             groupChanged = newPosition != currentPosition;
         }
-        if (messageChanged || dataChanged || groupChanged || pollChanged || widthChanged && messageObject.isPoll() || isPhotoDataChanged(messageObject) || pinnedBottom != bottomNear || pinnedTop != topNear) {
+        if (messageChanged || dataChanged || groupChanged || pollChanged || widthChanged && messageObject.isPoll() || isPhotoDataChanged(messageObject) || pinnedBottom != bottomNear || pinnedTop != topNear || isSavingContentRestrictedChanged) {
             wasPinned = isPinned;
             pinnedBottom = bottomNear;
             pinnedTop = topNear;
@@ -3130,6 +3134,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             lastPostAuthor = messageObject.messageOwner.post_author;
             isHighlightedAnimated = false;
             widthBeforeNewTimeLine = -1;
+            chat = MessagesController.getInstance(currentAccount).getChat(currentMessageObject.getChatId());
+            isSavingContentRestricted = chat != null && chat.noforwards;
             if (currentMessagesGroup != null && (currentMessagesGroup.posArray.size() > 1)) {
                 currentPosition = currentMessagesGroup.positions.get(currentMessageObject);
                 if (currentPosition == null) {
@@ -3336,7 +3342,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                                     commentAvatarImages[a].setImageCoords(0, 0, AndroidUtilities.dp(24), AndroidUtilities.dp(24));
                                     long id = MessageObject.getPeerId(recentRepliers.get(a));
                                     TLRPC.User user = null;
-                                    TLRPC.Chat chat = null;
                                     if (DialogObject.isUserDialog(id)) {
                                         user = MessagesController.getInstance(currentAccount).getUser(id);
                                     } else if (DialogObject.isChatDialog(id)) {
@@ -9599,7 +9604,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     private boolean checkNeedDrawShareButton(MessageObject messageObject) {
-        if (currentMessageObject.deleted || currentMessageObject.isSponsored()) {
+        if (currentMessageObject.deleted || currentMessageObject.isSponsored() || isSavingContentRestricted) {
             return false;
         }
         if (currentPosition != null) {
@@ -9620,6 +9625,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         long currentUserId = UserConfig.getInstance(currentAccount).getClientUserId();
         if (fwd_from != null && fwd_from.from_id instanceof TLRPC.TL_peerChannel && currentMessageObject.getDialogId() == currentUserId) {
             currentChat = MessagesController.getInstance(currentAccount).getChat(fwd_from.from_id.channel_id);
+            isSavingContentRestricted = currentChat.noforwards;
         } else if (fwd_from != null && fwd_from.saved_from_peer != null) {
             if (fwd_from.saved_from_peer.user_id != 0) {
                 if (fwd_from.from_id instanceof TLRPC.TL_peerUser) {
@@ -9632,12 +9638,14 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     currentUser = messagesController.getUser(fwd_from.from_id.user_id);
                 } else {
                     currentChat = messagesController.getChat(fwd_from.saved_from_peer.channel_id);
+                    isSavingContentRestricted = currentChat.noforwards;
                 }
             } else if (fwd_from.saved_from_peer.chat_id != 0) {
                 if (fwd_from.from_id instanceof TLRPC.TL_peerUser) {
                     currentUser = messagesController.getUser(fwd_from.from_id.user_id);
                 } else {
                     currentChat = messagesController.getChat(fwd_from.saved_from_peer.chat_id);
+                    isSavingContentRestricted = currentChat.noforwards;
                 }
             }
         } else if (fwd_from != null && fwd_from.from_id instanceof TLRPC.TL_peerUser && (fwd_from.imported || currentMessageObject.getDialogId() == currentUserId)) {
@@ -9653,6 +9661,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 currentChat = messagesController.getChat(-fromId);
             } else if (currentMessageObject.messageOwner.post) {
                 currentChat = messagesController.getChat(currentMessageObject.messageOwner.peer_id.channel_id);
+                isSavingContentRestricted = currentChat.noforwards;
             }
         }
     }
